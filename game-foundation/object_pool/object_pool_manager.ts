@@ -124,7 +124,7 @@ export class object_pool_manager {
             key = arg1.name;
             pool = this._pools.get(key);
             if (!pool) {
-                this.Load(arg1, 5);
+                this.Load(arg1, 1);
                 pool = this._pools.get(key)!;
             }
         }
