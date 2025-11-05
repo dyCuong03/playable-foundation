@@ -17,7 +17,7 @@ const { ccclass } = _decorator;
  *  - onLateTick
  *  - onDispose
  */
-@ccclass('lifecycle_component')
+@ccclass('LifecycleComponent')
 export abstract class LifecycleComponent extends Component
     implements IInitializable, ITickable, IFixedTickable, ILateTickable, IDisposable {
     private registered = false;
