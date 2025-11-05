@@ -1,5 +1,5 @@
 ﻿import { Node, Prefab, instantiate, Vec3, Quat, director } from "cc";
-import {assets_manager} from "db://assets/plugins/game-foundation/assets_manager";
+import {assets_manager} from "db://assets/plugins/playable-foundation/game-foundation/assets_manager";
 
 interface IObjectPool {
     prefab: Prefab | Node;

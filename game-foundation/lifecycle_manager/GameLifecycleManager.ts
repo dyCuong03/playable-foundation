@@ -1,10 +1,10 @@
 ﻿import {_decorator, Component} from "cc";
-import {IInitializable} from "db://assets/plugins/game-foundation/lifecycle_manager/implementions/IInitializable";
-import {ITickable} from "db://assets/plugins/game-foundation/lifecycle_manager/implementions/ITickable";
-import {IFixedTickable} from "db://assets/plugins/game-foundation/lifecycle_manager/implementions/IFixedTickable";
-import {ILateTickable} from "db://assets/plugins/game-foundation/lifecycle_manager/implementions/ILateTickable";
-import {IDisposable} from "db://assets/plugins/game-foundation/lifecycle_manager/implementions/IDisposable";
-import {lifecycle_registry} from "db://assets/plugins/game-foundation/lifecycle_manager/lifecycle_decorator";
+import {IInitializable} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/IInitializable";
+import {ITickable} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/ITickable";
+import {IFixedTickable} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/IFixedTickable";
+import {ILateTickable} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/ILateTickable";
+import {IDisposable} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/IDisposable";
+import {lifecycle_registry} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/lifecycle_decorator";
 
 const {ccclass} = _decorator;
 
