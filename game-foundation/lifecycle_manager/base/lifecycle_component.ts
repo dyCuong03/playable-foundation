@@ -5,6 +5,7 @@ import { ITickable } from 'db://assets/plugins/playable-foundation/game-foundati
 import { IFixedTickable } from 'db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/IFixedTickable';
 import { ILateTickable } from 'db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/ILateTickable';
 import { IDisposable } from 'db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/IDisposable';
+import { IStartable } from 'db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/IStartable';
 
 const { ccclass } = _decorator;
 
@@ -19,14 +20,14 @@ const { ccclass } = _decorator;
  */
 @ccclass('LifecycleComponent')
 export abstract class LifecycleComponent extends Component
-    implements IInitializable, ITickable, IFixedTickable, ILateTickable, IDisposable {
+    implements IInitializable, IStartable, ITickable, IFixedTickable, ILateTickable, IDisposable {
     private registered = false;
     private waitingForManager = false;
 
     protected onLoad(): void {
         this.tryRegisterWithManager();
     }
-
+    
     protected onEnable(): void {
         this.tryRegisterWithManager();
     }
@@ -41,6 +42,10 @@ export abstract class LifecycleComponent extends Component
 
     Initialize(): void {
         this.onInitialize();
+    }
+
+    Start(): void {
+        this.onStart();
     }
 
     Tick(deltaTime: number): void {
@@ -65,6 +70,10 @@ export abstract class LifecycleComponent extends Component
     }
 
     protected onInitialize(): void {
+        // Override in subclasses
+    }
+
+    protected onStart(): void {
         // Override in subclasses
     }
 

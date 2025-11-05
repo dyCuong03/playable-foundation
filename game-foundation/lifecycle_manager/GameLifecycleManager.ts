@@ -4,6 +4,7 @@ import {ITickable} from "db://assets/plugins/playable-foundation/game-foundation
 import {IFixedTickable} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/IFixedTickable";
 import {ILateTickable} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/ILateTickable";
 import {IDisposable} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/IDisposable";
+import {IStartable} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/implementions/IStartable";
 import {lifecycle_registry} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager/lifecycle_decorator";
 
 const {ccclass} = _decorator;
@@ -13,6 +14,8 @@ export class GameLifecycleManager extends Component {
     private static instance: GameLifecycleManager;
 
     private initializables: Set<IInitializable> = new Set();
+    private startables: Set<IStartable> = new Set();
+    private pendingStartables: Set<IStartable> = new Set();
     private tickables: Set<ITickable> = new Set();
     private fixedTickables: Set<IFixedTickable> = new Set();
     private lateTickables: Set<ILateTickable> = new Set();
@@ -22,6 +25,7 @@ export class GameLifecycleManager extends Component {
 
     private fixedTimeStep: number = 0.02;
     private fixedAccumulator: number = 0;
+    private hasStarted: boolean = false;
 
     static get Instance(): GameLifecycleManager {
         return this.instance;
@@ -70,6 +74,17 @@ export class GameLifecycleManager extends Component {
             registeredCount++;
         }
 
+        if (this.isType<IStartable>(obj, 'Start')) {
+            this.startables.add(obj);
+            if (this.hasStarted) {
+                this.pendingStartables.delete(obj);
+                obj.Start();
+            } else {
+                this.pendingStartables.add(obj);
+            }
+            registeredCount++;
+        }
+
         if (this.isType<ITickable>(obj, 'Tick')) {
             this.tickables.add(obj);
             registeredCount++;
@@ -99,6 +114,8 @@ export class GameLifecycleManager extends Component {
         if (!obj) return;
 
         this.initializables.delete(obj);
+        this.startables.delete(obj);
+        this.pendingStartables.delete(obj);
         this.tickables.delete(obj);
         this.fixedTickables.delete(obj);
         this.lateTickables.delete(obj);
@@ -119,6 +136,16 @@ export class GameLifecycleManager extends Component {
 
     private isType<T>(obj: any, methodName: string): obj is T {
         return methodName in obj;
+    }
+
+    start() {
+        this.hasStarted = true;
+
+        this.pendingStartables.forEach(startable => {
+            startable.Start();
+        });
+
+        this.pendingStartables.clear();
     }
 
     update(deltaTime: number) {
@@ -147,10 +174,13 @@ export class GameLifecycleManager extends Component {
         });
 
         this.initializables.clear();
+        this.startables.clear();
+        this.pendingStartables.clear();
         this.tickables.clear();
         this.fixedTickables.clear();
         this.lateTickables.clear();
         this.disposables.clear();
+        this.hasStarted = false;
 
         this.autoRegisteredInstances = [];
 
@@ -162,6 +192,8 @@ export class GameLifecycleManager extends Component {
     public GetDebugInfo(): string {
         return `GameLifecycleManager Stats:
   Initializables: ${this.initializables.size}
+  Startables: ${this.startables.size}
+  PendingStartables: ${this.pendingStartables.size}
   Tickles: ${this.tickables.size}
   FixedTickles: ${this.fixedTickables.size}
   LateTickles: ${this.lateTickables.size}
