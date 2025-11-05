@@ -1,0 +1,1 @@
+﻿export { assets_manager } from "./assets_manager"
