@@ -1,4 +1,4 @@
-﻿import { Node, Prefab, instantiate, Vec3, Quat, director } from "cc";
+﻿import { Node, Prefab, instantiate, Vec3, Quat, director, game } from "cc";
 import {assets_manager} from "db://assets/plugins/playable-foundation/game-foundation/assets_manager";
 
 interface IObjectPool {
@@ -25,6 +25,7 @@ export class object_pool_manager {
             if (scene) {
                 this._pool_container.parent = scene;
             }
+            game.addPersistRootNode(this._pool_container);
         }
         return this._pool_container;
     }
