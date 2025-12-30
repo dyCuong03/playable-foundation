@@ -56,8 +56,6 @@ export class tracking_service {
     /* ================= INPUT COUNT ================= */
 
     static input_count(extraData: any = {}) {
-        this._inputCount++;
-
         Tracking.trackByURI("input_count", {
             count: this._inputCount,
             ...extraData,
@@ -99,8 +97,6 @@ export class tracking_service {
         const ips = this._inputCount / playDurationSec;
 
         Tracking.trackByURI("input_per_second", {
-            input_count: this._inputCount,
-            play_duration_sec: playDurationSec,
             input_per_second: Number(ips.toFixed(2)),
             ...extraData,
         });
@@ -136,6 +132,7 @@ export class tracking_service {
         if (this._startTime <= 0) return;
 
         this._hitTotal++;
+        this._inputCount++;
 
         if (x < 0.5 && y < 0.5) this._hitTL++;
         else if (x >= 0.5 && y < 0.5) this._hitTR++;

@@ -39,6 +39,7 @@ export class tracking_component extends LifecycleComponent {
         tracking_service.user_drop_off();
         tracking_service.play_duration();
         tracking_service.input_per_second();
+        tracking_service.input_count();
         tracking_service.hit_map();
     }
 
@@ -56,7 +57,6 @@ export class tracking_component extends LifecycleComponent {
         y = Math.max(0, Math.min(1, y));
 
         tracking_service.first_input_time();
-        tracking_service.input_count();
         tracking_service.record_hit(x, y);
     }
 }
