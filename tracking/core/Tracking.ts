@@ -1,8 +1,14 @@
+import { EDITOR } from 'cc/env';
 export class Tracking {
     private static readonly BASE_URL =
         "https://test.kyvuong.mobi/p.gif";
 
     static trackByURI(event: string, data: any = {}) {
+        if (EDITOR) {
+            console.log('[Tracking][Editor]', event, data);
+            return;
+        }
+
         try {
             let q = "e=" + encodeURIComponent(event);
             q += "&ts=" + Date.now();
@@ -22,7 +28,7 @@ export class Tracking {
             img.src = `${this.BASE_URL}?${q}`;
 
             setTimeout(() => {
-                console.log(img.src);
+                console.log("Have some :" + img.src);
             }, 1000);
 
         } catch (e) {
