@@ -23,10 +23,10 @@ export class Tracking {
     }
 
     static trackByURI(event: string, data: any = {}) {
-        // if (EDITOR) {
-        //     console.log('[Tracking][Editor]', event, data);
-        //     return;
-        // }
+        if (EDITOR) {
+            console.log('[Tracking][Editor]', event, data);
+            return;
+        }
 
         try {
             let q = "e=" + encodeURIComponent(event);
