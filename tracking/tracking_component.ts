@@ -1,14 +1,16 @@
-import {_decorator, EventMouse, EventTouch, input, Input, view} from 'cc';
+import {_decorator, Node, EventTouch, input, Input, view} from 'cc';
 import {LifecycleComponent} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager";
 import {tracking_service} from "db://assets/plugins/playable-foundation/tracking/tracking_service";
 
-const { ccclass } = _decorator;
+const { ccclass, property } = _decorator;
 
 @ccclass('tracking_component')
 export class tracking_component extends LifecycleComponent {
 
+    @property(Node)
+    canvasNode: Node | null = null;
+
     private _onTouchStart?: (e: EventTouch) => void;
-    private _onMouseDown?: (e: EventMouse) => void;
 
     override Initialize(): void {
         super.Initialize();
@@ -20,7 +22,12 @@ export class tracking_component extends LifecycleComponent {
             const p = e.getUILocation();
             this.recordHit(p.x, p.y);
         };
-        input.on(Input.EventType.TOUCH_START, this._onTouchStart, this);
+        this.canvasNode.on(
+            Input.EventType.TOUCH_START,
+            this._onTouchStart,
+            this,
+            true // capture phase
+        );
     }
 
     override Start() {
@@ -31,10 +38,16 @@ export class tracking_component extends LifecycleComponent {
         super.Dispose();
 
         // ===== REMOVE LISTENERS =====
-        if (this._onTouchStart) input.off(Input.EventType.TOUCH_START, this._onTouchStart, this);
+        if (this.canvasNode && this._onTouchStart) {
+            this.canvasNode.off(
+                Input.EventType.TOUCH_START,
+                this._onTouchStart,
+                this,
+                true
+            );
+        }
 
         this._onTouchStart = undefined;
-        this._onMouseDown = undefined;
 
         tracking_service.user_drop_off();
         tracking_service.play_duration();
