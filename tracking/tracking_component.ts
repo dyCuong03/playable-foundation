@@ -1,4 +1,4 @@
-import {_decorator, Node, EventTouch, input, Input, view} from 'cc';
+import {_decorator, Node, EventTouch, find, Input, view} from 'cc';
 import {LifecycleComponent} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager";
 import {tracking_service} from "db://assets/plugins/playable-foundation/tracking/tracking_service";
 
@@ -22,6 +22,11 @@ export class tracking_component extends LifecycleComponent {
             const p = e.getUILocation();
             this.recordHit(p.x, p.y);
         };
+
+        if (!this.canvasNode) {
+            this.canvasNode = find('Canvas');
+        }
+
         this.canvasNode.on(
             Input.EventType.TOUCH_START,
             this._onTouchStart,
