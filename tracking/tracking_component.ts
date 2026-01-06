@@ -49,11 +49,11 @@ export class tracking_component extends LifecycleComponent {
 
         this._onTouchStart = undefined;
 
-        tracking_service.user_drop_off();
-        tracking_service.play_duration();
-        tracking_service.input_per_second();
-        tracking_service.input_count();
-        tracking_service.hit_map();
+        // tracking_service.user_drop_off();
+        // tracking_service.play_duration();
+        // tracking_service.input_per_second();
+        // tracking_service.input_count();
+        // tracking_service.hit_map();
     }
 
     /* ================= INTERNAL ================= */

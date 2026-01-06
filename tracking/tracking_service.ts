@@ -112,7 +112,7 @@ export class tracking_service {
 
     /* ================= HIP MAP (OPTIONAL) ================= */
 
-    static hit_map() {
+    static hit_map(extraData: any = {}) {
         if (this._hitTotal <= 0) return;
 
         const pct = (v: number) =>
@@ -125,6 +125,7 @@ export class tracking_service {
             top_right_pct: pct(this._hitTR),
             bottom_left_pct: pct(this._hitBL),
             bottom_right_pct: pct(this._hitBR),
+            ...extraData,
         });
     }
 
