@@ -21,25 +21,13 @@ export class tracking_global_listener extends Component {
     /* ================= INTERNAL ================= */
 
     private registerBrowserListeners() {
-        window.addEventListener('pagehide', this.onPageHide, {capture: true});
-        document.addEventListener('visibilitychange', this.onVisibilityChange, true);
         window.addEventListener('beforeunload', this.onBeforeUnload, {capture: true});
     }
 
     /* ================= HANDLERS ================= */
 
-    private onPageHide = () => {
-        this.fireEndEvents('pagehide');
-    };
-
     private onBeforeUnload = () => {
         this.fireEndEvents('beforeunload');
-    };
-
-    private onVisibilityChange = () => {
-        if (document.visibilityState === 'hidden') {
-            this.fireEndEvents('visibility_hidden');
-        }
     };
 
     /* ================= FIRE EVENTS ================= */
