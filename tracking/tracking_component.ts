@@ -123,8 +123,6 @@ export class tracking_component extends LifecycleComponent {
         x = Math.max(0, Math.min(1, x));
         y = Math.max(0, Math.min(1, y));
 
-        console.log("x", x, y);
-
         tracking_service.record_hit(x, y);
     }
 }
