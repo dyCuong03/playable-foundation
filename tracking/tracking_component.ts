@@ -1,6 +1,15 @@
-import {_decorator, Node, EventTouch, find, Input, view} from 'cc';
-import {LifecycleComponent} from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager";
-import {tracking_service} from "db://assets/plugins/playable-foundation/tracking/tracking_service";
+import {
+    _decorator,
+    Node,
+    EventTouch,
+    find,
+    Input,
+    view,
+    input
+} from 'cc';
+
+import { LifecycleComponent } from "db://assets/plugins/playable-foundation/game-foundation/lifecycle_manager";
+import { tracking_service } from "db://assets/plugins/playable-foundation/tracking/tracking_service";
 
 const { ccclass, property } = _decorator;
 
@@ -10,7 +19,12 @@ export class tracking_component extends LifecycleComponent {
     @property(Node)
     canvasNode: Node | null = null;
 
-    private _onTouchStart?: (e: EventTouch) => void;
+    private _onFirstTouch?: (e: EventTouch) => void;
+    private _onGlobalTouch?: (e: EventTouch) => void;
+
+    private _firstInputCaptured: boolean = false;
+
+    /* ================= LIFECYCLE ================= */
 
     override Initialize(): void {
         super.Initialize();
@@ -18,20 +32,38 @@ export class tracking_component extends LifecycleComponent {
         // ===== START SESSION =====
         tracking_service.startSession();
 
-        this._onTouchStart = (e: EventTouch) => {
-            const p = e.getUILocation();
-            this.recordHit(p.x, p.y);
-        };
-
         if (!this.canvasNode) {
             this.canvasNode = find('Canvas');
         }
 
-        this.canvasNode.on(
+        /**
+         * ===== FIRST INPUT (Canvas + Capture)
+         */
+        this._onFirstTouch = (e: EventTouch) => {
+            if (this._firstInputCaptured) return;
+
+            this._firstInputCaptured = true;
+
+            const p = e.getUILocation();
+            this.recordHit(p.x, p.y);
+
+            tracking_service.first_input_time();
+
+            this.canvasNode?.off(
+                Input.EventType.TOUCH_START,
+                this._onFirstTouch!,
+                this,
+                true
+            );
+
+            this.startGlobalTracking();
+        };
+
+        this.canvasNode?.on(
             Input.EventType.TOUCH_START,
-            this._onTouchStart,
+            this._onFirstTouch,
             this,
-            true // capture phase
+            true
         );
     }
 
@@ -42,26 +74,43 @@ export class tracking_component extends LifecycleComponent {
     override Dispose(): void {
         super.Dispose();
 
-        // ===== REMOVE LISTENERS =====
-        if (this.canvasNode && this._onTouchStart) {
+        // ===== CLEAN FIRST INPUT LISTENER =====
+        if (this.canvasNode && this._onFirstTouch) {
             this.canvasNode.off(
                 Input.EventType.TOUCH_START,
-                this._onTouchStart,
+                this._onFirstTouch,
                 this,
                 true
             );
         }
 
-        this._onTouchStart = undefined;
+        // ===== CLEAN GLOBAL INPUT =====
+        if (this._onGlobalTouch) {
+            input.off(
+                Input.EventType.TOUCH_END,
+                this._onGlobalTouch,
+                this
+            );
+        }
 
-        // tracking_service.user_drop_off();
-        // tracking_service.play_duration();
-        // tracking_service.input_per_second();
-        // tracking_service.input_count();
-        // tracking_service.hit_map();
+        this._onFirstTouch = undefined;
+        this._onGlobalTouch = undefined;
     }
 
-    /* ================= INTERNAL ================= */
+    /* ================= TRACKING ================= */
+
+    private startGlobalTracking() {
+        this._onGlobalTouch = (e: EventTouch) => {
+            const p = e.getUILocation();
+            this.recordHit(p.x, p.y);
+        };
+
+        input.on(
+            Input.EventType.TOUCH_END,
+            this._onGlobalTouch,
+            this
+        );
+    }
 
     private recordHit(uiX: number, uiY: number) {
         const size = view.getVisibleSize();
@@ -74,7 +123,8 @@ export class tracking_component extends LifecycleComponent {
         x = Math.max(0, Math.min(1, x));
         y = Math.max(0, Math.min(1, y));
 
-        tracking_service.first_input_time();
+        console.log("x", x, y);
+
         tracking_service.record_hit(x, y);
     }
 }
