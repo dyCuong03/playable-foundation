@@ -59,6 +59,13 @@ export class super_html_playable {
         return (window.super_html && super_html.is_audio()) || true;
     }
 
-
+    channel_name() {
+        //@ts-ignore
+        if (window.super_html && super_html.channel) {
+            //@ts-ignore
+            return super_html.channel;
+        }
+        return "";
+    }
 }
 export default new super_html_playable();

@@ -1,8 +1,10 @@
 import { EDITOR } from 'cc/env';
 import {constant} from "db://assets/configs/constant";
+import super_html_playable from "db://assets/plugins/playable-foundation/super-html/super_html_playable";
 export class Tracking {
     private static readonly BASE_URL =
         "https://test.kyvuong.mobi/p.gif";
+    private static _runtimeLogged = false;
 
     private static _sessionId: string = Tracking.generateSessionId();
     private static _referer: string = Tracking.getReferer();
@@ -23,7 +25,9 @@ export class Tracking {
     }
 
     static trackByURI(event: string, data: any = {}) {
-        if (EDITOR) {
+        const isLocal = this.isRunningLocal();
+
+        if (EDITOR || isLocal) {
             console.log('[Tracking][Editor]', event, data);
             return;
         }
@@ -56,6 +60,37 @@ export class Tracking {
 
         } catch (e) {
             console.error(e);
+        }
+    }
+
+    private static getChannelName(): string {
+        try {
+            return super_html_playable.channel_name() || "Editor";
+        } catch {
+            return "";
+        }
+    }
+
+    private static isRunningLocal(): boolean {
+        if (EDITOR) {
+            return true;
+        }
+
+        try {
+            if (typeof window === "undefined" || !window.location) {
+                return false;
+            }
+
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname?.toLowerCase() || "";
+
+            if (protocol === "file:" || hostname.length === 0) {
+                return true;
+            }
+
+            return hostname === "localhost" || hostname === "127.0.0.1";
+        } catch {
+            return false;
         }
     }
 }
