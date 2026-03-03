@@ -61,6 +61,11 @@ export class super_html_playable {
 
     channel_name() {
         //@ts-ignore
+        if (window.super_html_channel) {
+            //@ts-ignore
+            return window.super_html_channel;
+        }
+        //@ts-ignore
         if (window.super_html && super_html.channel) {
             //@ts-ignore
             return super_html.channel;

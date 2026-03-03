@@ -4,7 +4,6 @@ import super_html_playable from "db://assets/plugins/playable-foundation/super-h
 export class Tracking {
     private static readonly BASE_URL =
         "https://test.kyvuong.mobi/p.gif";
-    private static _runtimeLogged = false;
 
     private static _sessionId: string = Tracking.generateSessionId();
     private static _referer: string = Tracking.getReferer();
@@ -40,6 +39,7 @@ export class Tracking {
             q += "&ref=" + encodeURIComponent(this._referer);
             q += "&ts=" + Date.now();
             q += "&r=" + Math.random();
+            q += "&plf=" + super_html_playable.channel_name();
 
             for (const k in data) {
                 if (data.hasOwnProperty(k)) {
@@ -60,14 +60,6 @@ export class Tracking {
 
         } catch (e) {
             console.error(e);
-        }
-    }
-
-    private static getChannelName(): string {
-        try {
-            return super_html_playable.channel_name() || "Editor";
-        } catch {
-            return "";
         }
     }
 
