@@ -33,7 +33,7 @@ export class Tracking {
 
         try {
             let q = "e=" + encodeURIComponent(event);
-            q += "&pid=" + constant.TRACKING.PROJECT_ID;
+            q += "&pid=" + constant.TRACKING.PACKAGE_NAME;
             q += "&playable_id=" + constant.TRACKING.PLAYABLE_ID;
             q += "&sid=" + encodeURIComponent(this._sessionId);
             q += "&ref=" + encodeURIComponent(this._referer);
