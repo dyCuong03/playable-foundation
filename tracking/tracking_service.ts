@@ -11,6 +11,8 @@ export class tracking_service {
     /* ================= SESSION ================= */
 
     static startSession() {
+        Tracking.init();
+
         this._startTime = Date.now();
         this._firstInputTime = 0;
         this._fitTracked = false;

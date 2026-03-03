@@ -1,18 +1,53 @@
 import { EDITOR } from 'cc/env';
-import {constant} from "db://assets/configs/constant";
+import { constant } from "db://assets/configs/constant";
 import super_html_playable from "db://assets/plugins/playable-foundation/super-html/super_html_playable";
+
+type CampaignPayload = Record<string, string>;
+
 export class Tracking {
     private static readonly BASE_URL =
         "https://test.kyvuong.mobi/p.gif";
 
-    private static _sessionId: string = Tracking.generateSessionId();
+    private static _sessionId: string | null = null;
     private static _referer: string = Tracking.getReferer();
+    private static _initialized = false;
+    private static _cachedCampaignJson = "";
+    private static _cachedCampaignPayload: CampaignPayload = {};
+    private static _cachedPlatform = "";
+
+    static init() {
+        if (this._initialized) {
+            return;
+        }
+
+        const payload = this.collectCampaignInfo();
+        this._cachedCampaignPayload = payload;
+        this._cachedCampaignJson = JSON.stringify(payload);
+
+        const preferredPlatform = this.safeChannelName();
+        this._cachedPlatform = preferredPlatform || payload.network || "unknown";
+
+        this._initialized = true;
+    }
+
+    private static ensureInitialized() {
+        if (!this._initialized) {
+            this.init();
+        }
+    }
 
     private static generateSessionId(): string {
         return (
             Date.now().toString(36) +
             Math.random().toString(36).slice(2, 10)
         );
+    }
+
+    private static getSessionId(): string {
+        if (!this._sessionId) {
+            this._sessionId = Tracking.generateSessionId();
+        }
+        return this._sessionId;
     }
 
     private static getReferer(): string {
@@ -23,7 +58,24 @@ export class Tracking {
         }
     }
 
+    private static safeChannelName(): string {
+        try {
+            return super_html_playable.channel_name() || "";
+        } catch {
+            return "";
+        }
+    }
+
     private static getCampaignInfo(): string {
+        this.ensureInitialized();
+        return this._cachedCampaignJson;
+    }
+
+    private static collectCampaignInfo(): CampaignPayload {
+        if (typeof window === "undefined" || !window.location) {
+            return {};
+        }
+
         const params = new URLSearchParams(window.location.search);
 
         const get = function (...keys: string[]) {
@@ -34,15 +86,11 @@ export class Tracking {
             return "";
         };
 
-        // 🔥 Network detection ưu tiên plf hoặc channel_name
         const network =
             get("plf", "platform") ||
-            (typeof super_html_playable !== "undefined" &&
-                super_html_playable.channel_name &&
-                super_html_playable.channel_name()) ||
+            this.safeChannelName() ||
             "unknown";
 
-        // 🔥 Unified click id mapping (multi network)
         const unifiedClickId = get(
             "click_id",
             "clickid",
@@ -60,33 +108,21 @@ export class Tracking {
             "pangle_click_id"
         );
 
-        const result: any = {
+        const result: CampaignPayload = {
             network: network,
-
-            // campaign structure (unified mapping)
             campaign_id: get("campaign_id", "cid", "campaignid", "c_id"),
             campaign_name: get("campaign_name", "cname"),
-
             adgroup_id: get("adgroup_id", "agid", "adgroupid"),
             adgroup_name: get("adgroup_name", "agname"),
-
             creative_id: get("creative_id", "crid", "creativeid"),
             creative_name: get("creative_name", "crname"),
-
             placement_id: get("placement_id", "pid", "placementid"),
             placement_name: get("placement_name", "pname"),
-
             click_id: unifiedClickId,
-
-            // attribution specific
             gclid: get("gclid"),
             ttclid: get("ttclid"),
             fbclid: get("fbclid"),
-
-            // app info
             package_name: get("package_name", "bundle", "app_bundle", "pkg"),
-
-            // device/context
             os: get("os"),
             os_version: get("os_version"),
             device_model: get("device_model"),
@@ -94,18 +130,19 @@ export class Tracking {
             language: get("lang", "language")
         };
 
-        // 🔥 Remove empty field để JSON gọn
-        const cleanResult: any = {};
+        const cleanResult: CampaignPayload = {};
         for (const key in result) {
             if (result[key]) {
                 cleanResult[key] = result[key];
             }
         }
 
-        return JSON.stringify(cleanResult);
+        return cleanResult;
     }
 
     static trackByURI(event: string, data: any = {}) {
+        this.ensureInitialized();
+
         const isLocal = this.isRunningLocal();
 
         if (EDITOR || isLocal) {
@@ -114,23 +151,32 @@ export class Tracking {
         }
 
         try {
+            const mergedData: Record<string, unknown> = {
+                ...this._cachedCampaignPayload,
+                ...data,
+            };
+
             let q = "e=" + encodeURIComponent(event);
             q += "&pid=" + constant.TRACKING.PACKAGE_NAME;
             q += "&playable_id=" + constant.TRACKING.PLAYABLE_ID;
-            q += "&sid=" + encodeURIComponent(this._sessionId);
+            q += "&sid=" + encodeURIComponent(this.getSessionId());
             q += "&ref=" + encodeURIComponent(this._referer);
             q += "&ts=" + Date.now();
             q += "&r=" + Math.random();
-            q += "&plf=" + encodeURIComponent(super_html_playable.channel_name() || "unknown");
-            q += "&camp=" + encodeURIComponent(this.getCampaignInfo());
+            q += "&plf=" + encodeURIComponent(this._cachedPlatform);
 
-            for (const k in data) {
-                if (data.hasOwnProperty(k)) {
+            const camp = this.getCampaignInfo();
+            if (camp) {
+                q += "&camp=" + encodeURIComponent(camp);
+            }
+
+            for (const k in mergedData) {
+                if (Object.prototype.hasOwnProperty.call(mergedData, k)) {
                     q +=
                         "&" +
                         encodeURIComponent(k) +
                         "=" +
-                        encodeURIComponent(String(data[k]));
+                        encodeURIComponent(String(mergedData[k]));
                 }
             }
 
