@@ -24,11 +24,11 @@ export class Tracking {
     }
 
     private static getCampaignInfo(): string {
-        const params = new URLSearchParams(window.location.search);
+        const params = this.parseQueryParams();
 
         const get = function (...keys: string[]) {
             for (let i = 0; i < keys.length; i++) {
-                const value = params.get(keys[i]);
+                const value = params[keys[i]];
                 if (value) return value;
             }
             return "";
@@ -105,6 +105,52 @@ export class Tracking {
         return JSON.stringify(cleanResult);
     }
 
+    private static parseQueryParams(): Record<string, string> {
+        try {
+            if (typeof window === "undefined" || !window.location) {
+                return {};
+            }
+
+            const search = window.location.search || "";
+            const query = search.startsWith("?") ? search.slice(1) : search;
+            if (!query) {
+                return {};
+            }
+
+            const result: Record<string, string> = {};
+            const segments = query.split("&");
+            for (const segment of segments) {
+                if (!segment) {
+                    continue;
+                }
+
+                const [rawKey, rawValue = ""] = segment.split("=");
+                if (!rawKey) {
+                    continue;
+                }
+
+                const key = this.decodeQueryComponent(rawKey);
+                if (!key || key in result) {
+                    continue;
+                }
+
+                result[key] = this.decodeQueryComponent(rawValue);
+            }
+            return result;
+        } catch {
+            return {};
+        }
+    }
+
+    private static decodeQueryComponent(value: string): string {
+        const normalized = value.replace(/\+/g, " ");
+        try {
+            return decodeURIComponent(normalized);
+        } catch {
+            return normalized;
+        }
+    }
+
     static trackByURI(event: string, data: any = {}) {
         const isLocal = this.isRunningLocal();
 
@@ -121,7 +167,7 @@ export class Tracking {
             q += "&ref=" + encodeURIComponent(this._referer);
             q += "&ts=" + Date.now();
             q += "&r=" + Math.random();
-            q += "&plf=" + encodeURIComponent(super_html_playable.channel_name() || "unknown");
+            q += "&plf=" + super_html_playable.channel_name() || "unknown";
             q += "&camp=" + encodeURIComponent(this.getCampaignInfo());
 
             for (const k in data) {
@@ -134,11 +180,22 @@ export class Tracking {
                 }
             }
 
+
+
+
+
+
+
+
+
+            console.log(q);
+            console.log(q);
+
             const img = new Image();
             img.src = `${this.BASE_URL}?${q}`;
 
             setTimeout(() => {
-                console.log("Have some :" + img.src);
+                 console.log("Have some :" + img.src);
             }, 1000);
 
         } catch (e) {
