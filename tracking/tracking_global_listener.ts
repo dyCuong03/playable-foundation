@@ -56,11 +56,7 @@ export class tracking_global_listener extends Component {
             return;
         }
 
-        tracking_service.user_drop_off({reason});
-        tracking_service.play_duration({reason});
-        tracking_service.input_per_second({reason});
-        tracking_service.input_count({reason});
-        tracking_service.hit_map({reason});
+        tracking_service.periodic_snapshot({reason});
     }
 
     private canTrackEndEvents(): boolean {
