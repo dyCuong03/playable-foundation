@@ -1,5 +1,5 @@
-import { EDITOR } from 'cc/env';
-import { constant } from "db://assets/configs/constant";
+import {EDITOR} from 'cc/env';
+import {constant} from "db://assets/configs/constant";
 import super_html_playable from "db://assets/plugins/playable-foundation/super-html/super_html_playable";
 
 type CampaignPayload = Record<string, string>;
@@ -14,6 +14,7 @@ export class Tracking {
     private static _cachedCampaignJson = "";
     private static _cachedCampaignPayload: CampaignPayload = {};
     private static _cachedPlatform = "";
+    private static _firstTrackTimeMs = 0;
 
     static init() {
         if (this._initialized) {
@@ -144,9 +145,19 @@ export class Tracking {
         this.ensureInitialized();
 
         const isLocal = this.isRunningLocal();
+        const sessionId = this.getSessionId();
+
+        if (!this.canTrackByDuration()) {
+            return;
+        }
 
         if (EDITOR || isLocal) {
-            console.log('[Tracking][Editor]', event, data);
+            console.log("[Tracking][Event]", {
+                event,
+                sid: sessionId,
+                mode: EDITOR ? "editor" : "local",
+                data,
+            });
             return;
         }
 
@@ -159,7 +170,7 @@ export class Tracking {
             let q = "e=" + encodeURIComponent(event);
             q += "&pid=" + constant.TRACKING.PACKAGE_NAME;
             q += "&playable_id=" + constant.TRACKING.PLAYABLE_ID;
-            q += "&sid=" + encodeURIComponent(this.getSessionId());
+            q += "&sid=" + encodeURIComponent(sessionId);
             q += "&ref=" + encodeURIComponent(this._referer);
             q += "&ts=" + Date.now();
             q += "&r=" + Math.random();
@@ -184,8 +195,13 @@ export class Tracking {
             img.src = `${this.BASE_URL}?${q}`;
 
             setTimeout(() => {
-                console.log("Have some :" + img.src);
-            }, 1000);
+                console.log("[Tracking][Event]", {
+                    event,
+                    sid: sessionId,
+                    mode: "remote",
+                    url: img.src,
+                });
+            }, 500);
 
         } catch (e) {
             console.error(e);
@@ -213,5 +229,29 @@ export class Tracking {
         } catch {
             return false;
         }
+    }
+
+    private static canTrackByDuration(): boolean {
+        const maxDurationMs = this.getMaxTrackingDurationMs();
+        if (maxDurationMs <= 0) {
+            return true;
+        }
+
+        if (this._firstTrackTimeMs <= 0) {
+            this._firstTrackTimeMs = Date.now();
+            return true;
+        }
+
+        const elapsedMs = Date.now() - this._firstTrackTimeMs;
+        return elapsedMs <= maxDurationMs;
+    }
+
+    private static getMaxTrackingDurationMs(): number {
+        const configuredSeconds = constant.TRACKING.MAX_TRACKING_DURATION_SEC;
+        if (Number.isFinite(configuredSeconds) && configuredSeconds > 0) {
+            return configuredSeconds * 1000;
+        }
+
+        return 60 * 1000;
     }
 }
