@@ -6,7 +6,7 @@ type CampaignPayload = Record<string, string>;
 
 export class Tracking {
     private static readonly BASE_URL =
-        "http://103.82.195.96:9000/p.gif";
+        "https://test.kyvuong.mobi/p.gif";
 
     private static _sessionId: string | null = null;
     private static _referer: string = Tracking.getReferer();
