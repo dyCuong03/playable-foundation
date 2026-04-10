@@ -174,7 +174,7 @@ export class Tracking {
             q += "&ref=" + encodeURIComponent(this._referer);
             q += "&ts=" + Date.now();
             q += "&r=" + Math.random();
-            q += "&plf=" + encodeURIComponent(this._cachedPlatform);
+            q += "&plf=" + "Android";
 
             const camp = this.getCampaignInfo();
             if (camp) {
@@ -191,16 +191,14 @@ export class Tracking {
                 }
             }
 
+            const envValue = constant.TRACKING.ENV === "production" ? "production" : "test";
+            q += "&env=" + encodeURIComponent(envValue);
+
             const img = new Image();
             img.src = `${this.BASE_URL}?${q}`;
 
             setTimeout(() => {
-                console.log("[Tracking][Event]", {
-                    event,
-                    sid: sessionId,
-                    mode: "remote",
-                    url: img.src,
-                });
+                const x = img.src;
             }, 500);
 
         } catch (e) {
