@@ -1,4 +1,5 @@
 import {EDITOR} from 'cc/env';
+import {sys} from 'cc';
 import {constant} from "db://assets/configs/constant";
 import super_html_playable from "db://assets/plugins/playable-foundation/super-html/super_html_playable";
 
@@ -184,6 +185,23 @@ export class Tracking {
         }
     }
 
+    private static resolvePlatform(): string {
+        const fromSys = String(sys.os || "").trim();
+        if (fromSys) {
+            return fromSys;
+        }
+
+        const fromCampaign = (
+            this._cachedCampaignPayload.plf ||
+            this._cachedCampaignPayload.platform ||
+            this._cachedCampaignPayload.os ||
+            this.safeChannelName() ||
+            this._cachedPlatform
+        ).trim();
+
+        return fromCampaign || "unknown";
+    }
+
     static trackByURI(event: string, data: any = {}) {
         this.ensureInitialized();
 
@@ -217,7 +235,7 @@ export class Tracking {
             q += "&ref=" + encodeURIComponent(this._referer);
             q += "&ts=" + Date.now();
             q += "&r=" + Math.random();
-            q += "&plf=" + "Android";
+            q += "&plf=" + encodeURIComponent(this.resolvePlatform());
 
             const camp = this.getCampaignInfo();
             if (camp) {
