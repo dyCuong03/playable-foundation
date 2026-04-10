@@ -220,8 +220,9 @@ export class Tracking {
             q += "&r=" + Math.random();
             q += "&plf=" + encodeURIComponent(this.resolvePlatform());
 
-            const camp = this.getCampaignInfo();
-            if (camp) {
+            const safeChannelName = this.safeChannelName();
+            if (safeChannelName) {
+                const camp = JSON.stringify({ network: safeChannelName });
                 q += "&camp=" + encodeURIComponent(camp);
             }
 
