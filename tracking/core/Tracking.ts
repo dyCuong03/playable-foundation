@@ -77,11 +77,11 @@ export class Tracking {
             return {};
         }
 
-        const params = new URLSearchParams(window.location.search);
+        const params = this.parseLocationSearch(window.location.search || "");
 
         const get = function (...keys: string[]) {
             for (let i = 0; i < keys.length; i++) {
-                const value = params.get(keys[i]);
+                const value = params[keys[i]];
                 if (value) return value;
             }
             return "";
@@ -139,6 +139,49 @@ export class Tracking {
         }
 
         return cleanResult;
+    }
+
+    private static parseLocationSearch(search: string): CampaignPayload {
+        const result: CampaignPayload = {};
+        const normalizedSearch = search.startsWith("?") ? search.slice(1) : search;
+
+        if (!normalizedSearch) {
+            return result;
+        }
+
+        const pairs = normalizedSearch.split("&");
+        for (let i = 0; i < pairs.length; i++) {
+            const pair = pairs[i];
+            if (!pair) {
+                continue;
+            }
+
+            const separatorIndex = pair.indexOf("=");
+            const rawKey = separatorIndex >= 0 ? pair.slice(0, separatorIndex) : pair;
+            const rawValue = separatorIndex >= 0 ? pair.slice(separatorIndex + 1) : "";
+            const key = this.decodeQueryValue(rawKey);
+
+            if (!key || Object.prototype.hasOwnProperty.call(result, key)) {
+                continue;
+            }
+
+            result[key] = this.decodeQueryValue(rawValue);
+        }
+
+        return result;
+    }
+
+    private static decodeQueryValue(value: string): string {
+        if (!value) {
+            return "";
+        }
+
+        const normalizedValue = value.replace(/\+/g, " ");
+        try {
+            return decodeURIComponent(normalizedValue);
+        } catch {
+            return normalizedValue;
+        }
     }
 
     static trackByURI(event: string, data: any = {}) {
