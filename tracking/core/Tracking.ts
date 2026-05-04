@@ -6,9 +6,6 @@ import super_html_playable from "db://assets/plugins/playable-foundation/super-h
 type CampaignPayload = Record<string, string>;
 
 export class Tracking {
-    private static readonly BASE_URL =
-        "https://test.kyvuong.mobi/p.gif";
-
     private static _sessionId: string | null = null;
     private static _referer: string = Tracking.getReferer();
     private static _initialized = false;
@@ -16,6 +13,7 @@ export class Tracking {
     private static _cachedCampaignPayload: CampaignPayload = {};
     private static _cachedPlatform = "";
     private static _firstTrackTimeMs = 0;
+    private static _inFlightImages = new Set<HTMLImageElement>();
 
     static init() {
         if (this._initialized) {
@@ -220,10 +218,14 @@ export class Tracking {
             q += "&r=" + Math.random();
             q += "&plf=" + encodeURIComponent(this.resolvePlatform());
 
-            const safeChannelName = this.safeChannelName();
-            if (safeChannelName) {
-                const camp = JSON.stringify({ network: safeChannelName });
-                q += "&camp=" + encodeURIComponent(camp);
+            if (this._cachedCampaignJson && this._cachedCampaignJson !== "{}") {
+                q += "&camp=" + encodeURIComponent(this._cachedCampaignJson);
+            } else {
+                const safeChannelName = this.safeChannelName();
+                if (safeChannelName) {
+                    const camp = JSON.stringify({ network: safeChannelName });
+                    q += "&camp=" + encodeURIComponent(camp);
+                }
             }
 
             for (const k in mergedData) {
@@ -239,16 +241,59 @@ export class Tracking {
             const envValue = constant.TRACKING.ENV === "production" ? "production" : "test";
             q += "&env=" + encodeURIComponent(envValue);
 
-            const img = new Image();
-            img.src = `${this.BASE_URL}?${q}`;
-
-            setTimeout(() => {
-                const x = img.src;
-            }, 500);
-
+            this.sendTrackingRequest(q);
         } catch (e) {
             console.error(e);
         }
+    }
+
+    private static sendTrackingRequest(queryString: string) {
+        const url = `${this.getBaseUrl()}?${queryString}`;
+
+        if (this.trySendWithFetch(url)) {
+            return;
+        }
+
+        this.sendWithImage(url);
+    }
+
+    private static trySendWithFetch(url: string): boolean {
+        try {
+            if (typeof window === "undefined" || typeof window.fetch !== "function") {
+                return false;
+            }
+
+            void window.fetch(url, {
+                method: "GET",
+                mode: "no-cors",
+                cache: "no-store",
+                keepalive: true,
+                credentials: "omit",
+            }).catch(() => {
+                this.sendWithImage(url);
+            });
+
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    private static sendWithImage(url: string) {
+        const img = new Image();
+        const cleanup = () => {
+            img.onload = null;
+            img.onerror = null;
+            this._inFlightImages.delete(img);
+        };
+
+        img.onload = cleanup;
+        img.onerror = cleanup;
+
+        this._inFlightImages.add(img);
+        img.src = url;
+
+        window.setTimeout(cleanup, 10_000);
     }
 
     private static resolvePlatform(): string {
@@ -313,5 +358,15 @@ export class Tracking {
         }
 
         return 60 * 1000;
+    }
+
+    private static getBaseUrl(): string {
+        const configuredBaseUrl = String((constant.TRACKING as { BASE_URL?: string }).BASE_URL || "").trim();
+
+        if (configuredBaseUrl) {
+            return configuredBaseUrl;
+        }
+
+        return "/p.gif";
     }
 }

@@ -12,12 +12,19 @@ export class tracking_global_listener extends Component {
     private static _intervalId: number | null = null;
     private static _lastReason = "unknown";
     private static _trackingStartTimeMs = 0;
+    private static _windowListenersBound = false;
+    private static _boundInstance: tracking_global_listener | null = null;
+    private static _pagehideHandler: (() => void) | null = null;
+    private static _beforeUnloadHandler: (() => void) | null = null;
+    private static _visibilityChangeHandler: (() => void) | null = null;
 
     onLoad() {
         if (tracking_global_listener._trackingStartTimeMs <= 0) {
             tracking_global_listener._trackingStartTimeMs = Date.now();
         }
 
+        tracking_global_listener._boundInstance = this;
+        this.bindWindowLifecycleEvents();
         this.fireEndEvents("onLoad");
     }
 
@@ -27,7 +34,9 @@ export class tracking_global_listener extends Component {
 
     onDestroy() {
         this.stopEndEventInterval();
+        this.unbindWindowLifecycleEvents();
         tracking_global_listener._trackingStartTimeMs = 0;
+        tracking_global_listener._boundInstance = null;
     }
 
     private fireEndEvents(reason: string) {
@@ -57,6 +66,62 @@ export class tracking_global_listener extends Component {
         }
 
         tracking_service.periodic_snapshot({reason});
+    }
+
+    private bindWindowLifecycleEvents() {
+        if (tracking_global_listener._windowListenersBound || typeof window === "undefined") {
+            return;
+        }
+
+        const sendFinalSnapshot = (reason: string) => {
+            const instance = tracking_global_listener._boundInstance;
+            if (!instance) {
+                return;
+            }
+
+            instance.sendEndEvents(reason);
+        };
+
+        tracking_global_listener._pagehideHandler = () => {
+            sendFinalSnapshot("pagehide");
+        };
+
+        tracking_global_listener._beforeUnloadHandler = () => {
+            sendFinalSnapshot("beforeunload");
+        };
+
+        tracking_global_listener._visibilityChangeHandler = () => {
+            if (document.visibilityState === "hidden") {
+                sendFinalSnapshot("visibility_hidden");
+            }
+        };
+
+        window.addEventListener("pagehide", tracking_global_listener._pagehideHandler);
+        window.addEventListener("beforeunload", tracking_global_listener._beforeUnloadHandler);
+        document.addEventListener("visibilitychange", tracking_global_listener._visibilityChangeHandler);
+
+        tracking_global_listener._windowListenersBound = true;
+    }
+
+    private unbindWindowLifecycleEvents() {
+        if (typeof window !== "undefined") {
+            if (tracking_global_listener._pagehideHandler) {
+                window.removeEventListener("pagehide", tracking_global_listener._pagehideHandler);
+            }
+
+            if (tracking_global_listener._beforeUnloadHandler) {
+                window.removeEventListener("beforeunload", tracking_global_listener._beforeUnloadHandler);
+            }
+
+            if (tracking_global_listener._visibilityChangeHandler) {
+                document.removeEventListener("visibilitychange", tracking_global_listener._visibilityChangeHandler);
+            }
+        }
+
+        tracking_global_listener._pagehideHandler = null;
+        tracking_global_listener._beforeUnloadHandler = null;
+        tracking_global_listener._visibilityChangeHandler = null;
+        tracking_global_listener._windowListenersBound = false;
     }
 
     private canTrackEndEvents(): boolean {
