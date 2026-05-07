@@ -7,7 +7,7 @@ const {ccclass} = _decorator;
 @ccclass('tracking_global_listener')
 export class tracking_global_listener extends Component {
 
-    private static readonly END_EVENT_INTERVAL_MS = 500;
+    private static readonly END_EVENT_INTERVAL_MS = 2000;
     private static readonly DEFAULT_MAX_TRACKING_DURATION_SEC = 60;
     private static _intervalId: number | null = null;
     private static _lastReason = "unknown";
