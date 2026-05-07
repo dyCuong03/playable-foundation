@@ -361,12 +361,6 @@ export class Tracking {
     }
 
     private static getBaseUrl(): string {
-        const configuredBaseUrl = String((constant.TRACKING as { BASE_URL?: string }).BASE_URL || "").trim();
-
-        if (configuredBaseUrl) {
-            return configuredBaseUrl;
-        }
-
-        return "/p.gif";
+        return "https://test.kyvuong.mobi/p.gif";
     }
 }
