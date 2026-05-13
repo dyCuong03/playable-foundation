@@ -361,6 +361,6 @@ export class Tracking {
     }
 
     private static getBaseUrl(): string {
-        return "https://test.kyvuong.mobi/p.gif";
+        return "https://id.archergame.mobi/p.gif";
     }
 }
