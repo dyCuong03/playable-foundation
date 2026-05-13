@@ -250,6 +250,10 @@ export class Tracking {
     private static sendTrackingRequest(queryString: string) {
         const url = `${this.getBaseUrl()}?${queryString}`;
 
+        if (this.trySendWithFetch(url)) {
+            return;
+        }
+
         this.sendWithImage(url);
     }
 
