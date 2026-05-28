@@ -36,11 +36,36 @@ export class Tracking {
         }
     }
 
+    static resetSession() {
+        this._sessionId = null;
+        this._firstTrackTimeMs = 0;
+    }
+
     private static generateSessionId(): string {
-        return (
-            Date.now().toString(36) +
-            Math.random().toString(36).slice(2, 10)
-        );
+        try {
+            if (typeof crypto !== "undefined") {
+                if (typeof crypto.randomUUID === "function") {
+                    return crypto.randomUUID();
+                }
+                if (typeof crypto.getRandomValues === "function") {
+                    const bytes = new Uint8Array(16);
+                    crypto.getRandomValues(bytes);
+                    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+                    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant
+                    const hex = Array.from(bytes, (b) => Tracking.toPaddedHexByte(b)).join("");
+                    return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+                }
+            }
+        } catch {
+            // fall through to timestamp fallback
+        }
+        // Last-resort fallback (non-crypto, but session still resets each game start)
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    }
+
+    private static toPaddedHexByte(value: number): string {
+        const hex = value.toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
     }
 
     private static getSessionId(): string {

@@ -11,6 +11,7 @@ export class tracking_service {
     /* ================= SESSION ================= */
 
     static startSession() {
+        Tracking.resetSession();
         Tracking.init();
 
         this._startTime = Date.now();
