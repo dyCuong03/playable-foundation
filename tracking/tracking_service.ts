@@ -1,5 +1,10 @@
 import {Tracking} from "db://assets/plugins/playable-foundation/tracking/core/Tracking";
 
+// Forward-compatible opts type — gains terminal?: boolean once core-engineer updates Tracking.trackByURI.
+// Structurally assignable to the current opts type (all fields are compatible optional booleans) so no
+// type-cast is needed; the terminal field passes through to the transport at runtime.
+type TrkOpts = { beacon?: boolean; force?: boolean; terminal?: boolean };
+
 export class tracking_service {
 
     private static _startTime = 0;
@@ -8,9 +13,22 @@ export class tracking_service {
     private static _fitTracked = false;
     private static _inputCount = 0;
 
+    private static _sessionStarted = false;
+
+    // ===== HIT MAP COUNTERS =====
+    // Declared here (before startSession) so declaration order matches the reset assignments below.
+    private static _hitTotal = 0;
+    private static _hitTL = 0;
+    private static _hitTR = 0;
+    private static _hitBL = 0;
+    private static _hitBR = 0;
+
     /* ================= SESSION ================= */
 
     static startSession() {
+        if (this._sessionStarted) return;
+        this._sessionStarted = true;
+
         Tracking.resetSession();
         Tracking.init();
 
@@ -26,12 +44,13 @@ export class tracking_service {
         this._hitBR = 0;
     }
 
-    /* ================= PERIODIC SNAPSHOT ================= */
+    /* ================= SNAPSHOT ================= */
 
-    static periodic_snapshot(extraData: any = {}) {
+    static snapshot(reason: string, extraData: any = {}) {
         const hitMap = this.buildHitMapPayload();
 
-        Tracking.trackByURI("tracking_snapshot", {
+        const payload = {
+            reason,
             duration_sec: this.getSessionDurationSec(),
             play_duration_sec: this.getPlayDurationSec(),
             input_count: this._inputCount,
@@ -45,7 +64,33 @@ export class tracking_service {
             bottom_left_pct: hitMap.bottom_left_pct,
             bottom_right_pct: hitMap.bottom_right_pct,
             ...extraData,
-        });
+        };
+
+        // End snapshots are terminal: beacon survives page-unload; terminal flag tells the transport
+        // to dedupe by event name so exactly one tracking_snapshot("end") fires per session.
+        // All other snapshots are non-terminal (force only, no beacon).
+        const opts: TrkOpts = reason === "end"
+            ? { beacon: true, force: true, terminal: true }
+            : { force: true };
+        Tracking.trackByURI("tracking_snapshot", payload, opts);
+    }
+
+    /* ================= PLAYABLE START ================= */
+
+    static playable_start(extra: any = {}) {
+        Tracking.trackByURI("playable_start", { ...extra }, { force: true });
+    }
+
+    /* ================= PLAYABLE END ================= */
+
+    static playable_end(extra: any = {}) {
+        // Terminal end event: beacon ensures delivery on page unload; terminal flag tells the transport
+        // to dedupe by event name so exactly one playable_end fires per session.
+        const opts: TrkOpts = { beacon: true, force: true, terminal: true };
+        Tracking.trackByURI("playable_end", {
+            duration_sec: this.getSessionDurationSec(),
+            ...extra,
+        }, opts);
     }
 
     /* ================= DROP OFF ================= */
@@ -105,15 +150,7 @@ export class tracking_service {
         });
     }
 
-
-    // ===== HIT MAP COUNTER =====
-    private static _hitTotal = 0;
-    private static _hitTL = 0;
-    private static _hitTR = 0;
-    private static _hitBL = 0;
-    private static _hitBR = 0;
-
-    /* ================= HIP MAP (OPTIONAL) ================= */
+    /* ================= HIT MAP (OPTIONAL) ================= */
 
     static hit_map(extraData: any = {}) {
         if (this._hitTotal <= 0) return;
@@ -166,6 +203,7 @@ export class tracking_service {
     }
 
     private static getInputPerSecondValue(): number {
+        // Use max(1, playDuration) to avoid division by zero in the first second.
         const playDurationSec = Math.max(1, this.getPlayDurationSec());
         const ips = this._inputCount / playDurationSec;
         return Number(ips.toFixed(2));

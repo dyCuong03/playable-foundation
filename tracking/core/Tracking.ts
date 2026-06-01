@@ -14,6 +14,10 @@ export class Tracking {
     private static _cachedPlatform = "";
     private static _firstTrackTimeMs = 0;
     private static _inFlightImages = new Set<HTMLImageElement>();
+    // Monotonically increasing counter for the non-crypto fallback; incremented per call, never persisted.
+    private static _fallbackCounter = 0;
+    // Dedup guard for terminal events: once a terminal event name has been dispatched, it is never sent again.
+    private static _dispatchedTerminalEvents = new Set<string>();
 
     static init() {
         if (this._initialized) {
@@ -57,10 +61,15 @@ export class Tracking {
                 }
             }
         } catch {
-            // fall through to timestamp fallback
+            // fall through to fallback
         }
-        // Last-resort fallback (non-crypto, but session still resets each game start)
-        return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+        // Non-crypto fallback: Date.now (base36) + per-load monotonic counter + two Math.random segments.
+        // Not persisted (no localStorage/cookie) → every page load mints a brand-new id → no cross-run duplicates.
+        const t = Date.now().toString(36);
+        const c = (++Tracking._fallbackCounter).toString(36).padStart(4, "0");
+        const r1 = Math.random().toString(36).slice(2).padEnd(8, "0").slice(0, 8);
+        const r2 = Math.random().toString(36).slice(2).padEnd(8, "0").slice(0, 8);
+        return `${t}-${c}-${r1}-${r2}`;
     }
 
     private static toPaddedHexByte(value: number): string {
@@ -208,13 +217,24 @@ export class Tracking {
         }
     }
 
-    static trackByURI(event: string, data: any = {}) {
+    static trackByURI(event: string, data: any = {}, opts: { beacon?: boolean; force?: boolean; terminal?: boolean } = {}) {
         this.ensureInitialized();
+
+        // Terminal-event dedup: the first dispatch of a terminal event name goes through;
+        // any subsequent call with the same event name and terminal===true is a silent no-op.
+        if (opts.terminal === true) {
+            if (this._dispatchedTerminalEvents.has(event)) {
+                return;
+            }
+            this._dispatchedTerminalEvents.add(event);
+        }
 
         const isLocal = this.isRunningLocal();
         const sessionId = this.getSessionId();
 
-        if (!this.canTrackByDuration()) {
+        // Lifecycle events (start/end) pass force=true so the duration cap can never
+        // drop them — the playable_start and playable_end pair must always be delivered.
+        if (!opts.force && !this.canTrackByDuration()) {
             return;
         }
 
@@ -266,20 +286,36 @@ export class Tracking {
             const envValue = constant.TRACKING.ENV === "production" ? "production" : "test";
             q += "&env=" + encodeURIComponent(envValue);
 
-            this.sendTrackingRequest(q);
+            this.sendTrackingRequest(q, opts.beacon === true);
         } catch (e) {
             console.error(e);
         }
     }
 
-    private static sendTrackingRequest(queryString: string) {
+    private static sendTrackingRequest(queryString: string, useBeacon: boolean = false) {
         const url = `${this.getBaseUrl()}?${queryString}`;
+
+        // Beacon path (END events): survives page unload; falls through to fetch → Image on failure.
+        if (useBeacon && this.trySendWithBeacon(url)) {
+            return;
+        }
 
         if (this.trySendWithFetch(url)) {
             return;
         }
 
         this.sendWithImage(url);
+    }
+
+    private static trySendWithBeacon(url: string): boolean {
+        try {
+            if (typeof navigator === "undefined" || typeof navigator.sendBeacon !== "function") {
+                return false;
+            }
+            return navigator.sendBeacon(url);
+        } catch {
+            return false;
+        }
     }
 
     private static trySendWithFetch(url: string): boolean {
@@ -386,6 +422,6 @@ export class Tracking {
     }
 
     private static getBaseUrl(): string {
-        return "https://id.archergame.mobi/p.gif";
+        return constant.TRACKING.BASE_URL;
     }
 }

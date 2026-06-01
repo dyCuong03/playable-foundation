@@ -29,15 +29,40 @@ export class tracking_component extends LifecycleComponent {
     override Initialize(): void {
         super.Initialize();
 
-        // ===== START SESSION =====
-        tracking_service.startSession();
-
+        // Resolve canvas node early so the cleanup step below uses the same reference as the new binding.
         if (!this.canvasNode) {
             this.canvasNode = find('Canvas');
         }
 
+        // ===== GUARD AGAINST DOUBLE-BIND ON RE-INIT =====
+        // If Initialize is called more than once (e.g. after a soft reset), remove any stale listeners
+        // before creating new ones.  Dispose does the same cleanup, but re-init may not call Dispose first.
+        if (this._onFirstTouch && this.canvasNode) {
+            this.canvasNode.off(
+                Input.EventType.TOUCH_START,
+                this._onFirstTouch,
+                this,
+                true
+            );
+        }
+        if (this._onGlobalTouch) {
+            input.off(
+                Input.EventType.TOUCH_END,
+                this._onGlobalTouch,
+                this
+            );
+        }
+        this._onFirstTouch = undefined;
+        this._onGlobalTouch = undefined;
+        this._firstInputCaptured = false;
+
+        // ===== START SESSION =====
+        tracking_service.startSession();
+
         /**
          * ===== FIRST INPUT (Canvas + Capture)
+         * Registered with capture=true on TOUCH_START so it fires before any node handlers.
+         * Removes itself immediately after the first touch and hands off to the global listener.
          */
         this._onFirstTouch = (e: EventTouch) => {
             if (this._firstInputCaptured) return;
@@ -100,6 +125,8 @@ export class tracking_component extends LifecycleComponent {
     /* ================= TRACKING ================= */
 
     private startGlobalTracking() {
+        // Should never be called twice (guarded by _firstInputCaptured in _onFirstTouch),
+        // but assign the handler reference before binding so Dispose can always clean it up.
         this._onGlobalTouch = (e: EventTouch) => {
             const p = e.getUILocation();
             this.recordHit(p.x, p.y);
