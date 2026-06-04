@@ -1,5 +1,4 @@
 import {Tracking} from "db://assets/plugins/playable-foundation/tracking/core/Tracking";
-import {constant} from "db://assets/configs/constant";
 
 export class tracking_service {
 
@@ -229,8 +228,6 @@ export class tracking_service {
                 event_params: JSON.stringify({
                     platform,
                     campaign,
-                    package_name: constant.TRACKING.PACKAGE_NAME,
-                    playable_id: constant.TRACKING.PLAYABLE_ID,
                 }),
             });
         } catch (e) {
