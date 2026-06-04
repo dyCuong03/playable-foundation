@@ -1,17 +1,21 @@
 import {_decorator, Component} from 'cc';
-import {constant} from "db://assets/configs/constant";
 import {tracking_service} from "db://assets/plugins/playable-foundation/tracking/tracking_service";
 
 const {ccclass} = _decorator;
 
+/**
+ * Binds window-level lifecycle events (pagehide, beforeunload,
+ * visibilitychange) so that tracking_service.end() is guaranteed to
+ * fire even when the user closes/hides the tab rather than letting
+ * the Cocos lifecycle reach tracking_component.Dispose().
+ *
+ * The old 2-second periodic_snapshot polling has been removed;
+ * all session data now flows through the start / interaction /
+ * store_trigger / end event model.
+ */
 @ccclass('tracking_global_listener')
 export class tracking_global_listener extends Component {
 
-    private static readonly END_EVENT_INTERVAL_MS = 2000;
-    private static readonly DEFAULT_MAX_TRACKING_DURATION_SEC = 60;
-    private static _intervalId: number | null = null;
-    private static _lastReason = "unknown";
-    private static _trackingStartTimeMs = 0;
     private static _windowListenersBound = false;
     private static _boundInstance: tracking_global_listener | null = null;
     private static _pagehideHandler: (() => void) | null = null;
@@ -19,53 +23,18 @@ export class tracking_global_listener extends Component {
     private static _visibilityChangeHandler: (() => void) | null = null;
 
     onLoad() {
-        if (tracking_global_listener._trackingStartTimeMs <= 0) {
-            tracking_global_listener._trackingStartTimeMs = Date.now();
-        }
-
         tracking_global_listener._boundInstance = this;
         this.bindWindowLifecycleEvents();
-        this.fireEndEvents("onLoad");
     }
 
     onDisable() {
-        this.fireEndEvents('onDisable');
+        // end() is fired by tracking_component.Dispose() or by the
+        // window unload handlers below — nothing to do here.
     }
 
     onDestroy() {
-        this.stopEndEventInterval();
         this.unbindWindowLifecycleEvents();
-        tracking_global_listener._trackingStartTimeMs = 0;
         tracking_global_listener._boundInstance = null;
-    }
-
-    private fireEndEvents(reason: string) {
-        if (!this.canTrackEndEvents()) {
-            this.stopEndEventInterval();
-            return;
-        }
-
-        tracking_global_listener._lastReason = reason;
-        this.sendEndEvents(reason);
-
-        if (tracking_global_listener._intervalId !== null) return;
-
-        tracking_global_listener._intervalId = window.setInterval(() => {
-            if (!this.canTrackEndEvents()) {
-                this.stopEndEventInterval();
-                return;
-            }
-
-            this.sendEndEvents(tracking_global_listener._lastReason);
-        }, tracking_global_listener.END_EVENT_INTERVAL_MS);
-    }
-
-    private sendEndEvents(reason: string) {
-        if (!this.canTrackEndEvents()) {
-            return;
-        }
-
-        tracking_service.periodic_snapshot({reason});
     }
 
     private bindWindowLifecycleEvents() {
@@ -73,26 +42,21 @@ export class tracking_global_listener extends Component {
             return;
         }
 
-        const sendFinalSnapshot = (reason: string) => {
-            const instance = tracking_global_listener._boundInstance;
-            if (!instance) {
-                return;
+        const fireEnd = () => {
+            try {
+                tracking_service.end();
+            } catch {
+                // never crash the page on unload
             }
-
-            instance.sendEndEvents(reason);
         };
 
-        tracking_global_listener._pagehideHandler = () => {
-            sendFinalSnapshot("pagehide");
-        };
+        tracking_global_listener._pagehideHandler = fireEnd;
 
-        tracking_global_listener._beforeUnloadHandler = () => {
-            sendFinalSnapshot("beforeunload");
-        };
+        tracking_global_listener._beforeUnloadHandler = fireEnd;
 
         tracking_global_listener._visibilityChangeHandler = () => {
             if (document.visibilityState === "hidden") {
-                sendFinalSnapshot("visibility_hidden");
+                fireEnd();
             }
         };
 
@@ -122,33 +86,5 @@ export class tracking_global_listener extends Component {
         tracking_global_listener._beforeUnloadHandler = null;
         tracking_global_listener._visibilityChangeHandler = null;
         tracking_global_listener._windowListenersBound = false;
-    }
-
-    private canTrackEndEvents(): boolean {
-        const startTimeMs = tracking_global_listener._trackingStartTimeMs;
-        if (startTimeMs <= 0) {
-            return true;
-        }
-
-        const elapsedMs = Date.now() - startTimeMs;
-        return elapsedMs <= this.getMaxTrackingDurationMs();
-    }
-
-    private getMaxTrackingDurationMs(): number {
-        const configuredSeconds = constant.TRACKING.MAX_TRACKING_DURATION_SEC;
-        if (Number.isFinite(configuredSeconds) && configuredSeconds > 0) {
-            return configuredSeconds * 1000;
-        }
-
-        return tracking_global_listener.DEFAULT_MAX_TRACKING_DURATION_SEC * 1000;
-    }
-
-    private stopEndEventInterval() {
-        if (tracking_global_listener._intervalId === null) {
-            return;
-        }
-
-        window.clearInterval(tracking_global_listener._intervalId);
-        tracking_global_listener._intervalId = null;
     }
 }

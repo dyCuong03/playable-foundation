@@ -31,6 +31,7 @@ export class tracking_component extends LifecycleComponent {
 
         // ===== START SESSION =====
         tracking_service.startSession();
+        tracking_service.start();
 
         if (!this.canvasNode) {
             this.canvasNode = find('Canvas');
@@ -73,6 +74,9 @@ export class tracking_component extends LifecycleComponent {
 
     override Dispose(): void {
         super.Dispose();
+
+        // ===== FIRE END EVENT =====
+        tracking_service.end();
 
         // ===== CLEAN FIRST INPUT LISTENER =====
         if (this.canvasNode && this._onFirstTouch) {
@@ -124,5 +128,6 @@ export class tracking_component extends LifecycleComponent {
         y = Math.max(0, Math.min(1, y));
 
         tracking_service.record_hit(x, y);
+        tracking_service.recordRawInteract();
     }
 }

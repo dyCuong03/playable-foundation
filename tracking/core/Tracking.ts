@@ -96,6 +96,21 @@ export class Tracking {
         return this._cachedCampaignJson;
     }
 
+    static getPlatform(): string {
+        this.ensureInitialized();
+        return this._cachedPlatform;
+    }
+
+    static getCampaignJson(): string {
+        this.ensureInitialized();
+        return this._cachedCampaignJson;
+    }
+
+    static getCampaignPayload(): CampaignPayload {
+        this.ensureInitialized();
+        return this._cachedCampaignPayload;
+    }
+
     private static collectCampaignInfo(): CampaignPayload {
         if (typeof window === "undefined" || !window.location) {
             return {};
@@ -239,7 +254,7 @@ export class Tracking {
             q += "&playable_id=" + constant.TRACKING.PLAYABLE_ID;
             q += "&sid=" + encodeURIComponent(sessionId);
             q += "&ref=" + encodeURIComponent(this._referer);
-            q += "&ts=" + Date.now();
+            q += "&ts=" + new Date().toISOString();
             q += "&r=" + Math.random();
             q += "&plf=" + encodeURIComponent(this.resolvePlatform());
 
