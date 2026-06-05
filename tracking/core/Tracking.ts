@@ -24,8 +24,9 @@ export class Tracking {
         this._cachedCampaignPayload = payload;
         this._cachedCampaignJson = JSON.stringify(payload);
 
-        const preferredPlatform = this.safeChannelName();
-        this._cachedPlatform = preferredPlatform || payload.network || "unknown";
+        // Platform is the real device OS (Windows | Android | IOS) — NOT the
+        // ad-network name. Never fall back to channel/network here.
+        this._cachedPlatform = this.resolvePlatform();
 
         this._initialized = true;
     }
@@ -339,18 +340,32 @@ export class Tracking {
     private static resolvePlatform(): string {
         const fromSys = String(sys.os || "").trim();
         if (fromSys) {
-            return fromSys;
+            return this.normalizePlatform(fromSys);
         }
 
+        // Fall back to OS hints in the URL params (never the network/channel name).
         const fromCampaign = (
             this._cachedCampaignPayload.plf ||
             this._cachedCampaignPayload.platform ||
             this._cachedCampaignPayload.os ||
-            this.safeChannelName() ||
-            this._cachedPlatform
+            this._cachedPlatform ||
+            ""
         ).trim();
 
-        return fromCampaign || "unknown";
+        return this.normalizePlatform(fromCampaign);
+    }
+
+    // Map any raw OS string to the server's accepted enum: Windows | Android | IOS.
+    // Desktop/unknown collapses to Windows (the only valid desktop bucket).
+    private static normalizePlatform(raw: string): string {
+        const v = String(raw || "").trim().toLowerCase();
+        if (v.indexOf("android") >= 0) {
+            return "Android";
+        }
+        if (v.indexOf("ios") >= 0 || v.indexOf("iphone") >= 0 || v.indexOf("ipad") >= 0) {
+            return "IOS";
+        }
+        return "Windows";
     }
 
     private static isRunningLocal(): boolean {

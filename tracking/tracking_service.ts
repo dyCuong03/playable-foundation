@@ -214,20 +214,22 @@ export class tracking_service {
     /**
      * Fire the "start" event exactly once per session.
      * Called automatically from tracking_component.Initialize().
-     * platform and campaign default to values extracted from URL/super_html.
+     * network and platform default to values extracted from URL/super_html.
+     * event_params shape is flat: { network, platform }. platform is the real
+     * OS (Windows | Android | IOS), never the ad-network name.
      */
-    static start(params: { platform?: string; campaign?: object } = {}): void {
+    static start(params: { platform?: string; network?: string } = {}): void {
         if (this._startFired) {
             return;
         }
         this._startFired = true;
         try {
             const platform = params.platform || Tracking.getPlatform();
-            const campaign = params.campaign ?? Tracking.getCampaignPayload();
+            const network = params.network || Tracking.getCampaignPayload().network || "unknown";
             Tracking.trackByURI("start", {
                 event_params: JSON.stringify({
+                    network,
                     platform,
-                    campaign,
                 }),
             });
         } catch (e) {
