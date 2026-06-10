@@ -241,7 +241,6 @@ export class Tracking {
                 mode: EDITOR ? "editor" : "local",
                 data,
             });
-            return;
         }
 
         try {
