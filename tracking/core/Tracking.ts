@@ -234,14 +234,14 @@ export class Tracking {
             return;
         }
 
-        // if (EDITOR || isLocal) {
-        //     console.log("[Tracking][Event]", {
-        //         event,
-        //         sid: sessionId,
-        //         mode: EDITOR ? "editor" : "local",
-        //         data,
-        //     });
-        // }
+        if (EDITOR || isLocal) {
+            console.log("[Tracking][Event]", {
+                event,
+                sid: sessionId,
+                mode: EDITOR ? "editor" : "local",
+                data,
+            });
+        }
 
         try {
             const mergedData: Record<string, unknown> = {

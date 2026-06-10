@@ -1,5 +1,9 @@
 import {Tracking} from "db://assets/plugins/playable-foundation/tracking/core/Tracking";
 
+type TrackEventOptions = {
+    countRaw?: boolean;
+};
+
 export class tracking_service {
 
     private static _startTime = 0;
@@ -241,11 +245,13 @@ export class tracking_service {
      * Fire an "interaction" event and count it toward interact_count.
      * @param name  Meaningful interaction label (e.g. "swipe_card").
      */
-    static trackInteraction(name: string): void {
+    static trackInteraction(name: string, params: Record<string, any> = {}, options: TrackEventOptions = {}): void {
         try {
-            this.recordRawInteract();
+            if (options.countRaw !== false) {
+                this.recordRawInteract();
+            }
             Tracking.trackByURI("interaction", {
-                event_params: JSON.stringify({ name }),
+                event_params: JSON.stringify({ name, ...params }),
             });
         } catch (e) {
             console.error(e);
@@ -256,11 +262,13 @@ export class tracking_service {
      * Fire a "store_trigger" event and count it toward interact_count.
      * @param name  CTA label (e.g. "cta_store").
      */
-    static trackStoreTrigger(name: string): void {
+    static trackStoreTrigger(name: string, params: Record<string, any> = {}, options: TrackEventOptions = {}): void {
         try {
-            this.recordRawInteract();
+            if (options.countRaw !== false) {
+                this.recordRawInteract();
+            }
             Tracking.trackByURI("store_trigger", {
-                event_params: JSON.stringify({ name }),
+                event_params: JSON.stringify({ name, ...params }),
             });
         } catch (e) {
             console.error(e);
@@ -270,8 +278,9 @@ export class tracking_service {
     /**
      * Increment raw interaction counter.
      * Called automatically by tracking_component on each touch (wired in
-     * tracking_component.recordHit()), and internally by trackInteraction()
-     * and trackStoreTrigger(). Call directly for non-touch interactions.
+     * tracking_component.recordHit()). trackInteraction() and trackStoreTrigger()
+     * also increment by default; pass { countRaw: false } for handlers already
+     * covered by the global touch listener.
      */
     static recordRawInteract(): void {
         this._rawInteractCount++;

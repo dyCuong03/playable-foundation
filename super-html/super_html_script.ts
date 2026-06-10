@@ -1,6 +1,7 @@
 import { _decorator, Button, Color, Component, instantiate, Label, Node, Prefab, Sprite } from 'cc';
 import super_html_playable from './super_html_playable';
 import {constant} from "db://assets/configs/constant";
+import {tracking_service} from "db://assets/plugins/playable-foundation/tracking/tracking_service";
 const { ccclass, property } = _decorator;
 
 @ccclass('Super_html_script')
@@ -22,7 +23,8 @@ export class Super_html_script extends Component {
         super_html_playable.game_end();
     }
 
-    public on_click_download() {
+    public on_click_download(source: string = "download") {
+        tracking_service.trackStoreTrigger(source, {}, { countRaw: false });
         super_html_playable.download();
     }
 
