@@ -41,24 +41,8 @@ export class tracking_service {
     /* ================= PERIODIC SNAPSHOT ================= */
 
     /** @deprecated Replaced by start/interaction/store_trigger/end events. */
-    static periodic_snapshot(extraData: any = {}) {
-        const hitMap = this.buildHitMapPayload();
-
-        Tracking.trackByURI("tracking_snapshot", {
-            duration_sec: this.getSessionDurationSec(),
-            play_duration_sec: this.getPlayDurationSec(),
-            input_count: this._inputCount,
-            input_per_second: this.getInputPerSecondValue(),
-            first_input_captured: this._fitTracked ? 1 : 0,
-            first_input_time_sec: this.getFirstInputDelaySec(),
-
-            total_hits: hitMap.total_hits,
-            top_left_pct: hitMap.top_left_pct,
-            top_right_pct: hitMap.top_right_pct,
-            bottom_left_pct: hitMap.bottom_left_pct,
-            bottom_right_pct: hitMap.bottom_right_pct,
-            ...extraData,
-        });
+    static periodic_snapshot(_extraData: any = {}) {
+        return;
     }
 
     /* ================= DROP OFF ================= */
