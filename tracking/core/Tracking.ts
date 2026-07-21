@@ -112,6 +112,10 @@ export class Tracking {
         return this._cachedCampaignPayload;
     }
 
+    static getCampaignPlatform(): string {
+        return String(constant.TRACKING.PLATFORM_CAMP || "").trim() || "unknown";
+    }
+
     private static collectCampaignInfo(): CampaignPayload {
         if (typeof window === "undefined" || !window.location) {
             return {};
