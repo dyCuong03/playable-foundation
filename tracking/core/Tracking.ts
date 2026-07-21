@@ -113,7 +113,7 @@ export class Tracking {
     }
 
     static getCampaignPlatform(): string {
-        return String(constant.TRACKING.PLATFORM_CAMP || "").trim() || "unknown";
+        return String(constant.TRACKING.PLATFORM_CAMP || "").trim() || "Android";
     }
 
     private static collectCampaignInfo(): CampaignPayload {
