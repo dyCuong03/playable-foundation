@@ -7,6 +7,7 @@ type TrackEventOptions = {
 export class tracking_service {
 
     private static _startTime = 0;
+    private static _eventStartTime = 0;
     private static _firstInputTime = 0;
 
     private static _fitTracked = false;
@@ -23,6 +24,7 @@ export class tracking_service {
         Tracking.init();
 
         this._startTime = Date.now();
+        this._eventStartTime = 0;
         this._firstInputTime = 0;
         this._fitTracked = false;
         this._inputCount = 0;
@@ -168,6 +170,14 @@ export class tracking_service {
         return Math.max(0, Math.floor((Date.now() - this._startTime) / 1000));
     }
 
+    private static getEventDurationSec(): number {
+        if (this._eventStartTime <= 0) {
+            return 0;
+        }
+
+        return Math.max(0, Math.floor((Date.now() - this._eventStartTime) / 1000));
+    }
+
     private static getFirstInputDelaySec(): number {
         if (this._firstInputTime <= 0 || this._startTime <= 0) {
             return 0;
@@ -227,6 +237,7 @@ export class tracking_service {
         }
         this._startFired = true;
         try {
+            this._eventStartTime = Date.now();
             const platformUser = params.platform_user || params.platform || Tracking.getPlatform();
             const platformCamp = params.platform_camp || Tracking.getCampaignPlatform();
             const network = params.network || Tracking.getCampaignPayload().network || "unknown";
@@ -252,7 +263,7 @@ export class tracking_service {
                 this.recordRawInteract();
             }
             Tracking.trackByURI("interaction", {
-                event_params: JSON.stringify({ name, ...params }),
+                event_params: JSON.stringify({ name, ...params, duration: this.getEventDurationSec() }),
             });
         } catch (e) {
             console.error(e);
@@ -269,7 +280,7 @@ export class tracking_service {
                 this.recordRawInteract();
             }
             Tracking.trackByURI("store_trigger", {
-                event_params: JSON.stringify({ name, ...params }),
+                event_params: JSON.stringify({ name, ...params, duration: this.getEventDurationSec() }),
             });
         } catch (e) {
             console.error(e);
@@ -300,7 +311,10 @@ export class tracking_service {
         this._endFired = true;
         try {
             Tracking.trackByURI("end", {
-                event_params: JSON.stringify({ interact_count: this._rawInteractCount }),
+                event_params: JSON.stringify({
+                    interact_count: this._rawInteractCount,
+                    duration: this.getEventDurationSec(),
+                }),
             });
         } catch (e) {
             console.error(e);
