@@ -113,7 +113,8 @@ export class Tracking {
     }
 
     static getCampaignPlatform(): string {
-        return String(constant.TRACKING.PLATFORM_CAMP || "").trim() || "Android";
+        const trackingConfig = constant.TRACKING as typeof constant.TRACKING & { PLATFORM_CAMP?: string };
+        return String(trackingConfig.PLATFORM_CAMP || "").trim() || "Android";
     }
 
     private static collectCampaignInfo(): CampaignPayload {
