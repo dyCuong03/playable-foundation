@@ -271,7 +271,8 @@ export class tracking_service {
     }
 
     /**
-     * Fire a "store_trigger" event and count it toward interact_count.
+     * Fire a "store_trigger" event, count it toward interact_count, then close
+     * the session with the single allowed "end" event.
      * @param name  CTA label (e.g. "cta_store").
      */
     static trackStoreTrigger(name: string, params: Record<string, any> = {}, options: TrackEventOptions = {}): void {
@@ -282,6 +283,7 @@ export class tracking_service {
             Tracking.trackByURI("store_trigger", {
                 event_params: JSON.stringify({ name, ...params, duration: this.getEventDurationSec() }),
             });
+            this.end();
         } catch (e) {
             console.error(e);
         }
