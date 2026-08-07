@@ -81,6 +81,35 @@ export class AudioService extends Singleton<AudioService> {
         this.musicQueue = [];
     }
 
+    public isMusicPlaying(): boolean {
+        return !!this.musicSource && this.musicSource.isPlaying();
+    }
+
+    /**
+     * Pre-load BGM clip vào musicSource nhưng không play. Gọi lúc scene load để chuẩn bị.
+     * Sau đó gọi playPreloadedMusic() trong user gesture (SYNC) để đảm bảo browser autoplay policy pass ngay lần đầu.
+     */
+    public preloadMusic(audioPath: string, isLoop: boolean = true): void {
+        if (!this.musicSource) this.musicSource = this._createEmitter();
+        const clip = AudioContainer.instance?.getAudioClip(audioPath);
+        if (!clip) {
+            console.error(`[AudioService] preloadMusic: clip not found: ${audioPath}`);
+            return;
+        }
+        this.musicSource.audioSource.clip = clip;
+        this.musicSource.audioSource.loop = isLoop;
+        this.musicSource.audioSource.volume = this.isMusicMute ? 0 : 1;
+    }
+
+    /** Play music đã preload. SYNC — an toàn cho browser autoplay policy khi gọi trong touch handler. */
+    public playPreloadedMusic(): void {
+        if (!this.musicSource || !this.musicSource.audioSource.clip) {
+            console.warn('[AudioService] playPreloadedMusic: chưa preload — gọi preloadMusic() trước.');
+            return;
+        }
+        this.musicSource.audioSource.play();
+    }
+
     public stopSfx(audioPath: string): void {
         const emitter = this.sfxLoopEmitters.get(audioPath);
         if (emitter) {
