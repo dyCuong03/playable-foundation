@@ -4,6 +4,7 @@ import {Tracking} from "db://assets/plugins/playable-foundation/tracking/core/Tr
 // Structurally assignable to the current opts type (all fields are compatible optional booleans) so no
 // type-cast is needed; the terminal field passes through to the transport at runtime.
 type TrkOpts = { beacon?: boolean; force?: boolean; terminal?: boolean };
+type TrackEventOptions = { countRaw?: boolean };
 
 export class tracking_service {
 
@@ -14,6 +15,9 @@ export class tracking_service {
     private static _inputCount = 0;
 
     private static _sessionStarted = false;
+    private static _startEventFired = false;
+    private static _endEventFired = false;
+    private static _rawInteractCount = 0;
 
     // ===== HIT MAP COUNTERS =====
     // Declared here (before startSession) so declaration order matches the reset assignments below.
@@ -42,6 +46,66 @@ export class tracking_service {
         this._hitTR = 0;
         this._hitBL = 0;
         this._hitBR = 0;
+        this._startEventFired = false;
+        this._endEventFired = false;
+        this._rawInteractCount = 0;
+    }
+
+    /* ================= SEMANTIC EVENT API ================= */
+
+    /** Compatibility API used by current playable projects. */
+    static start(params: Record<string, any> = {}): void {
+        if (this._startEventFired) return;
+        this._startEventFired = true;
+        Tracking.trackByURI("start", {
+            event_params: JSON.stringify(params),
+        }, { force: true });
+    }
+
+    static trackInteraction(
+        name: string,
+        params: Record<string, any> = {},
+        options: TrackEventOptions = {},
+    ): void {
+        if (options.countRaw !== false) this.recordRawInteract();
+        Tracking.trackByURI("interaction", {
+            event_params: JSON.stringify({
+                name,
+                ...params,
+                duration: this.getSessionDurationSec(),
+            }),
+        });
+    }
+
+    static trackStoreTrigger(
+        name: string,
+        params: Record<string, any> = {},
+        options: TrackEventOptions = {},
+    ): void {
+        if (options.countRaw !== false) this.recordRawInteract();
+        Tracking.trackByURI("store_trigger", {
+            event_params: JSON.stringify({
+                name,
+                ...params,
+                duration: this.getSessionDurationSec(),
+            }),
+        }, { force: true });
+        this.end();
+    }
+
+    static recordRawInteract(): void {
+        this._rawInteractCount++;
+    }
+
+    static end(): void {
+        if (this._endEventFired) return;
+        this._endEventFired = true;
+        Tracking.trackByURI("end", {
+            event_params: JSON.stringify({
+                interact_count: this._rawInteractCount,
+                duration: this.getSessionDurationSec(),
+            }),
+        }, { beacon: true, force: true, terminal: true });
     }
 
     /* ================= SNAPSHOT ================= */
