@@ -92,6 +92,10 @@ export class Tracking {
         }
     }
 
+    private static isGoogleChannel(): boolean {
+        return this.safeChannelName().toLowerCase().indexOf("google") >= 0;
+    }
+
     private static getCampaignInfo(): string {
         this.ensureInitialized();
         return this._cachedCampaignJson;
@@ -231,6 +235,11 @@ export class Tracking {
 
     static trackByURI(event: string, data: any = {}) {
         this.ensureInitialized();
+
+        // Google Ads rejects playables that send network requests — never fire the pixel there.
+        if (this.isGoogleChannel()) {
+            return;
+        }
 
         const isLocal = this.isRunningLocal();
         const sessionId = this.getSessionId();
